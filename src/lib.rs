@@ -28,6 +28,18 @@ impl PyUuid {
     }
 }
 
+pub fn register_constants(py: Python, m: &PyModule) -> PyResult<()> {
+    m.add("NAMESPACE_DNS",
+          py.init(|token| PyUuid { data: uuid::NAMESPACE_DNS }).unwrap())?;
+    m.add("NAMESPACE_OID",
+          py.init(|token| PyUuid { data: uuid::NAMESPACE_OID }).unwrap())?;
+    m.add("NAMESPACE_URL",
+          py.init(|token| PyUuid { data: uuid::NAMESPACE_URL }).unwrap())?;
+    m.add("NAMESPACE_X500",
+          py.init(|token| PyUuid { data: uuid::NAMESPACE_X500 }).unwrap())?;
+    Ok(())
+}
+
 pub fn register_classes(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyUuid>()?;
     Ok(())
@@ -35,6 +47,7 @@ pub fn register_classes(py: Python, m: &PyModule) -> PyResult<()> {
 
 #[py::modinit(uuid_rpy)]
 fn init_mod(py: Python, m: &PyModule) -> PyResult<()> {
+    register_constants(py, m)?;
     register_classes(py, m)?;
 
     #[pyfn(m, "uuid4")]
