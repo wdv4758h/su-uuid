@@ -50,6 +50,16 @@ fn init_mod(py: Python, m: &PyModule) -> PyResult<()> {
     register_constants(py, m)?;
     register_classes(py, m)?;
 
+    #[pyfn(m, "uuid3")]
+    fn uuid3(py: Python, namespace: &PyUuid, name: &str)
+          -> PyResult<Py<PyUuid>> {
+        py.init(|token| {
+            PyUuid {
+                data: Uuid::new_v3(&namespace.data, name),
+            }
+        })
+    }
+
     #[pyfn(m, "uuid4")]
     fn uuid4(py: Python) -> PyResult<Py<PyUuid>> {
         py.init(|token| {
