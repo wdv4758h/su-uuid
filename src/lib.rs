@@ -70,6 +70,16 @@ pub fn register_constants(py: Python, m: &PyModule) -> PyResult<()> {
           py.init(|token| PyUuid { data: uuid::NAMESPACE_URL }).unwrap())?;
     m.add("NAMESPACE_X500",
           py.init(|token| PyUuid { data: uuid::NAMESPACE_X500 }).unwrap())?;
+
+    m.add("RFC_4122",
+          format!("{:?}", uuid::UuidVariant::RFC4122))?;
+    m.add("RESERVED_NCS",
+          format!("{:?}", uuid::UuidVariant::NCS))?;
+    m.add("RESERVED_MICROSOFT",
+          format!("{:?}", uuid::UuidVariant::Microsoft))?;
+    m.add("RESERVED_FUTURE",
+          format!("{:?}", uuid::UuidVariant::Future))?;
+
     Ok(())
 }
 
