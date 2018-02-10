@@ -28,8 +28,72 @@ impl PyUuid {
     }
 
     #[getter]
+    pub fn bytes_le(&self) -> PyResult<Vec<u8>> {
+        let mut data = self.data.as_bytes().to_vec();
+        data.reverse();
+        Ok(data)
+    }
+
+    #[getter]
+    pub fn clock_seq(&self) -> PyResult<u8> {
+        Ok(self.data.as_fields().3[1])
+    }
+
+    #[getter]
+    pub fn clock_seq_hi_variant(&self) -> PyResult<u8> {
+        Ok(self.data.as_fields().3[0])
+    }
+
+    #[getter]
+    pub fn clock_seq_low(&self) -> PyResult<u8> {
+        Ok(self.data.as_fields().3[1])
+    }
+
+    #[getter]
+    pub fn fields(&self) -> PyResult<(u32, u16, u16, u8, u8, u64)> {
+        let time_low = self.data.as_fields().0;
+        let time_mid = self.data.as_fields().1;
+        let time_hi_version = self.data.as_fields().2;
+        let clock_seq_hi_variant = self.data.as_fields().3[0];
+        let clock_seq_low = self.data.as_fields().3[1];
+        let node = self.data.as_fields().3[2..]
+                       .iter().fold(0_u64, |a, &b| { a*256+(b as u64) });
+        Ok((time_low, time_mid, time_hi_version,
+            clock_seq_hi_variant, clock_seq_low, node))
+    }
+
+    #[getter]
     pub fn hex(&self) -> PyResult<String> {
         Ok(self.data.simple().to_string())
+    }
+
+    // #[getter]
+    // pub fn int(&self) -> PyResult<u128> {
+    // }
+
+    #[getter]
+    pub fn node(&self) -> PyResult<u64> {
+        Ok(self.data.as_fields().3[2..]
+               .iter().fold(0_u64, |a, &b| { a*256+(b as u64) }))
+    }
+
+    // #[getter]
+    // pub fn time(&self) -> PyResult<u128> {
+    // }
+
+    #[getter]
+    pub fn time_hi_version(&self) -> PyResult<u16> {
+        Ok(self.data.as_fields().2)
+    }
+
+    #[getter]
+    pub fn time_low(&self) -> PyResult<u32> {
+        Ok(self.data.as_fields().0)
+    }
+
+    #[getter]
+    pub fn time_mid(&self) -> PyResult<u16> {
+        Ok(self.data.as_fields().1)
     }
 
     #[getter]
