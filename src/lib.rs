@@ -59,5 +59,15 @@ fn init_mod(py: Python, m: &PyModule) -> PyResult<()> {
         })
     }
 
+    #[pyfn(m, "uuid5")]
+    fn uuid5(py: Python, namespace: &PyUuid, name: &str)
+          -> PyResult<Py<PyUuid>> {
+        py.init(|token| {
+            PyUuid {
+                data: Uuid::new_v5(&namespace.data, name),
+            }
+        })
+    }
+
     Ok(())
 }
