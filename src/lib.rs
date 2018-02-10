@@ -28,6 +28,17 @@ impl PyUuid {
     }
 }
 
+#[py::proto]
+impl pyo3::class::basic::PyObjectProtocol for PyUuid {
+    fn __str__(&self) -> PyResult<String> {
+        Ok(self.data.hyphenated().to_string())
+    }
+
+    fn __repr__(&self) -> PyResult<String> {
+        Ok(format!("UUID('{}')", self.data.hyphenated().to_string()))
+    }
+}
+
 pub fn register_constants(py: Python, m: &PyModule) -> PyResult<()> {
     m.add("NAMESPACE_DNS",
           py.init(|token| PyUuid { data: uuid::NAMESPACE_DNS }).unwrap())?;
