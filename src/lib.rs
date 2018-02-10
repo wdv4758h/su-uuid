@@ -26,6 +26,11 @@ impl PyUuid {
         // FIXME: do not make new vector
         Ok(self.data.as_bytes().to_vec())
     }
+
+    #[getter]
+    pub fn hex(&self) -> PyResult<String> {
+        Ok(self.data.simple().to_string())
+    }
 }
 
 #[py::proto]
