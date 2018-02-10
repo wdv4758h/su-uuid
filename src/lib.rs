@@ -2,7 +2,6 @@
 extern crate pyo3;
 extern crate uuid;
 
-use pyo3::PyBytes;
 use pyo3::prelude::*;
 use uuid::Uuid;
 
@@ -37,5 +36,15 @@ pub fn register_classes(py: Python, m: &PyModule) -> PyResult<()> {
 #[py::modinit(uuid_rpy)]
 fn init_mod(py: Python, m: &PyModule) -> PyResult<()> {
     register_classes(py, m)?;
+
+    #[pyfn(m, "uuid4")]
+    fn uuid4(py: Python) -> PyResult<Py<PyUuid>> {
+        py.init(|token| {
+            PyUuid {
+                data: Uuid::new_v4(),
+            }
+        })
+    }
+
     Ok(())
 }
