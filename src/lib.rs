@@ -31,6 +31,23 @@ impl PyUuid {
     pub fn hex(&self) -> PyResult<String> {
         Ok(self.data.simple().to_string())
     }
+
+    #[getter]
+    pub fn urn(&self) -> PyResult<String> {
+        Ok(self.data.urn().to_string())
+    }
+
+    #[getter]
+    pub fn variant(&self) -> PyResult<String> {
+        Ok(format!("{:?}",
+                   self.data.get_variant()
+                            .unwrap_or(uuid::UuidVariant::RFC4122)))
+    }
+
+    #[getter]
+    pub fn version(&self) -> PyResult<usize> {
+        Ok(self.data.get_version_num())
+    }
 }
 
 #[py::proto]
