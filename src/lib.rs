@@ -1,12 +1,14 @@
 #![feature(i128_type)]
-
 #![feature(proc_macro, specialization, const_fn)]
+
 extern crate pyo3;
 extern crate uuid;
+
 
 use pyo3::prelude::*;
 use pyo3::ffi;
 use uuid::Uuid;
+
 
 #[py::class]
 struct PyUuid {
@@ -26,6 +28,7 @@ impl PyUuid {
 impl PyUuid {
     #[new]
     fn __new__(obj: &PyRawObject) -> PyResult<()> {
+        // FIXME: support flexible initial
         obj.init(|token| {
             PyUuid {
                 py: token,
@@ -71,6 +74,7 @@ impl PyUuid {
         let time_hi_version = self.data.as_fields().2;
         let clock_seq_hi_variant = self.data.as_fields().3[0];
         let clock_seq_low = self.data.as_fields().3[1];
+        // FIXME: more efficient way ?
         let node = self.data.as_fields().3[2..]
                        .iter().fold(0_u64, |a, &b| { a*256+(b as u64) });
         Ok((time_low, time_mid, time_hi_version,
@@ -100,6 +104,7 @@ impl PyUuid {
 
     #[getter]
     pub fn node(&self) -> PyResult<u64> {
+        // FIXME: more efficient way ?
         Ok(self.data.as_fields().3[2..]
                .iter().fold(0_u64, |a, &b| { a*256+(b as u64) }))
     }
@@ -152,6 +157,10 @@ impl pyo3::class::basic::PyObjectProtocol for PyUuid {
     }
 }
 
+////////////////////////////////////////
+// convient functions to make PyModule
+////////////////////////////////////////
+
 pub fn register_constants(py: Python, m: &PyModule) -> PyResult<()> {
     m.add("NAMESPACE_DNS",
           py.init(|token| PyUuid { py: token, data: uuid::NAMESPACE_DNS }).unwrap())?;
@@ -178,6 +187,11 @@ pub fn register_classes(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyUuid>()?;
     Ok(())
 }
+
+
+////////////////////////////////////////
+// CPython's entry point
+////////////////////////////////////////
 
 #[py::modinit(uuid_rpy)]
 fn init_mod(py: Python, m: &PyModule) -> PyResult<()> {
