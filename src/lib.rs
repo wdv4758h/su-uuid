@@ -7,6 +7,7 @@ use uuid::Uuid;
 
 #[py::class]
 struct PyUuid {
+    py: PyToken,
     data: uuid::Uuid,
 }
 
@@ -16,15 +17,16 @@ impl PyUuid {
     fn __new__(obj: &PyRawObject) -> PyResult<()> {
         obj.init(|token| {
             PyUuid {
+                py: token,
                 data: Uuid::new_v4(),
             }
         })
     }
 
     #[getter]
-    pub fn bytes(&self) -> PyResult<Vec<u8>> {
-        // FIXME: do not make new vector
-        Ok(self.data.as_bytes().to_vec())
+    pub fn bytes(&self) -> PyResult<PyObject> {
+        Ok(PyBytes::new(self.py(),
+                        self.data.as_bytes()).into())
     }
 
     #[getter]
@@ -127,13 +129,13 @@ impl pyo3::class::basic::PyObjectProtocol for PyUuid {
 
 pub fn register_constants(py: Python, m: &PyModule) -> PyResult<()> {
     m.add("NAMESPACE_DNS",
-          py.init(|token| PyUuid { data: uuid::NAMESPACE_DNS }).unwrap())?;
+          py.init(|token| PyUuid { py: token, data: uuid::NAMESPACE_DNS }).unwrap())?;
     m.add("NAMESPACE_OID",
-          py.init(|token| PyUuid { data: uuid::NAMESPACE_OID }).unwrap())?;
+          py.init(|token| PyUuid { py: token, data: uuid::NAMESPACE_OID }).unwrap())?;
     m.add("NAMESPACE_URL",
-          py.init(|token| PyUuid { data: uuid::NAMESPACE_URL }).unwrap())?;
+          py.init(|token| PyUuid { py: token, data: uuid::NAMESPACE_URL }).unwrap())?;
     m.add("NAMESPACE_X500",
-          py.init(|token| PyUuid { data: uuid::NAMESPACE_X500 }).unwrap())?;
+          py.init(|token| PyUuid { py: token, data: uuid::NAMESPACE_X500 }).unwrap())?;
 
     m.add("RFC_4122",
           format!("{:?}", uuid::UuidVariant::RFC4122))?;
@@ -162,6 +164,7 @@ fn init_mod(py: Python, m: &PyModule) -> PyResult<()> {
           -> PyResult<Py<PyUuid>> {
         py.init(|token| {
             PyUuid {
+                py: token,
                 data: Uuid::new_v3(&namespace.data, name),
             }
         })
@@ -171,6 +174,7 @@ fn init_mod(py: Python, m: &PyModule) -> PyResult<()> {
     fn uuid4(py: Python) -> PyResult<Py<PyUuid>> {
         py.init(|token| {
             PyUuid {
+                py: token,
                 data: Uuid::new_v4(),
             }
         })
@@ -181,6 +185,7 @@ fn init_mod(py: Python, m: &PyModule) -> PyResult<()> {
           -> PyResult<Py<PyUuid>> {
         py.init(|token| {
             PyUuid {
+                py: token,
                 data: Uuid::new_v5(&namespace.data, name),
             }
         })
