@@ -30,10 +30,12 @@ impl PyUuid {
     }
 
     #[getter]
-    pub fn bytes_le(&self) -> PyResult<Vec<u8>> {
+    pub fn bytes_le(&self) -> PyResult<PyObject> {
+        // FIXME: do not make new vector
         let mut data = self.data.as_bytes().to_vec();
         data.reverse();
-        Ok(data)
+        Ok(PyBytes::new(self.py(),
+                        &data).into())
     }
 
     #[getter]
