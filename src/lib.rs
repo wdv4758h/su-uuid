@@ -22,6 +22,12 @@ impl PyUuid {
         self.data.as_bytes()
             .iter().fold(0_u128, |a, &b| { a*256+(b as u128) })
     }
+
+    fn get_time(&self) -> u128 {
+        (((self.data.as_fields().2 as u128 & 0x0fff) << 48) |
+         ((self.data.as_fields().1 as u128) << 32) |
+         self.data.as_fields().0 as u128)
+    }
 }
 
 #[py::methods]
@@ -109,9 +115,21 @@ impl PyUuid {
                .iter().fold(0_u64, |a, &b| { a*256+(b as u64) }))
     }
 
-    // #[getter]
-    // pub fn time(&self) -> PyResult<u128> {
-    // }
+    #[getter]
+    pub fn time(&self) -> PyResult<PyObject> {
+        // 60 bits timestamp
+        let num_string = format!("{}\0", self.get_time());
+        Ok(unsafe {
+            PyObject::from_owned_ptr_or_panic(
+                self.py(),
+                ffi::PyLong_FromString(
+                    num_string.as_ptr() as *const i8,
+                    0 as *mut *mut i8,
+                    0_i32
+                )
+            )
+        })
+    }
 
     #[getter]
     pub fn time_hi_version(&self) -> PyResult<u16> {
