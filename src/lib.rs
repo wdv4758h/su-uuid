@@ -1,14 +1,25 @@
+#![feature(i128_type)]
+
 #![feature(proc_macro, specialization, const_fn)]
 extern crate pyo3;
 extern crate uuid;
 
 use pyo3::prelude::*;
+use pyo3::ffi;
 use uuid::Uuid;
 
 #[py::class]
 struct PyUuid {
     py: PyToken,
     data: uuid::Uuid,
+}
+
+impl PyUuid {
+    fn get_u128(&self) -> u128 {
+        // FIXME: use more lightweight way to make u128
+        self.data.as_bytes()
+            .iter().fold(0_u128, |a, &b| { a*256+(b as u128) })
+    }
 }
 
 #[py::methods]
@@ -71,9 +82,21 @@ impl PyUuid {
         Ok(self.data.simple().to_string())
     }
 
-    // #[getter]
-    // pub fn int(&self) -> PyResult<u128> {
-    // }
+    #[getter]
+    pub fn int(&self) -> PyResult<PyObject> {
+        // FIXME: use a more light weight way to make PyLong for u128
+        let num_string = format!("{}", self.get_u128());
+        Ok(unsafe {
+            PyObject::from_owned_ptr_or_panic(
+                self.py(),
+                ffi::PyLong_FromString(
+                    num_string.as_ptr() as *const i8,
+                    0 as *mut *mut i8,
+                    0_i32
+                )
+            )
+        })
+    }
 
     #[getter]
     pub fn node(&self) -> PyResult<u64> {
