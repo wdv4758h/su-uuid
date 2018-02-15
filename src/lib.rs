@@ -33,12 +33,23 @@ impl PyUuid {
 #[py::methods]
 impl PyUuid {
     #[new]
-    fn __new__(obj: &PyRawObject) -> PyResult<()> {
-        // FIXME: support flexible initial
+    fn __new__(obj: &PyRawObject,
+               fields: (u32, u16, u16, u8, u8, u64)) -> PyResult<()> {
+        let uuid =
+           Uuid::from_fields(fields.0,
+                             fields.1,
+                             fields.2,
+                             &[fields.3, fields.4,
+                              ((fields.5 >> 40) % 256) as u8,
+                              ((fields.5 >> 32) % 256) as u8,
+                              ((fields.5 >> 24) % 256) as u8,
+                              ((fields.5 >> 16) % 256) as u8,
+                              ((fields.5 >>  8) % 256) as u8,
+                              ((fields.5 >>  0) % 256) as u8]).unwrap();
         obj.init(|token| {
             PyUuid {
                 py: token,
-                data: Uuid::new_v4(),
+                data: uuid,
             }
         })
     }
