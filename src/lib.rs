@@ -8,6 +8,7 @@ extern crate uuid;
 use pyo3::prelude::*;
 use pyo3::ffi;
 use uuid::Uuid;
+use std::str::FromStr;
 
 
 #[py::class]
@@ -34,18 +35,26 @@ impl PyUuid {
 impl PyUuid {
     #[new]
     fn __new__(obj: &PyRawObject,
-               fields: (u32, u16, u16, u8, u8, u64)) -> PyResult<()> {
+               hex: &str,
+               fields: (u32, u16, u16, u8, u8, u64))
+      -> PyResult<()> {
+
         let uuid =
-           Uuid::from_fields(fields.0,
-                             fields.1,
-                             fields.2,
-                             &[fields.3, fields.4,
-                              ((fields.5 >> 40) % 256) as u8,
-                              ((fields.5 >> 32) % 256) as u8,
-                              ((fields.5 >> 24) % 256) as u8,
-                              ((fields.5 >> 16) % 256) as u8,
-                              ((fields.5 >>  8) % 256) as u8,
-                              ((fields.5 >>  0) % 256) as u8]).unwrap();
+            if !hex.is_empty() {
+                Uuid::from_str(hex).unwrap()
+            } else {
+               Uuid::from_fields(fields.0,
+                                 fields.1,
+                                 fields.2,
+                                 &[fields.3, fields.4,
+                                  ((fields.5 >> 40) % 256) as u8,
+                                  ((fields.5 >> 32) % 256) as u8,
+                                  ((fields.5 >> 24) % 256) as u8,
+                                  ((fields.5 >> 16) % 256) as u8,
+                                  ((fields.5 >>  8) % 256) as u8,
+                                  ((fields.5 >>  0) % 256) as u8]).unwrap()
+            };
+
         obj.init(|token| {
             PyUuid {
                 py: token,
