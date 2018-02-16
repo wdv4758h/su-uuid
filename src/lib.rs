@@ -19,9 +19,12 @@ struct PyUuid {
 
 impl PyUuid {
     fn get_u128(&self) -> u128 {
-        // FIXME: use more lightweight way to make u128
-        self.data.as_bytes()
-            .iter().fold(0_u128, |a, &b| { a*256+(b as u128) })
+        let ptr = self.data.as_bytes() as *const u8 as *const u128;
+        // this is fine, the as_bytes() will return &[u8, 16], which is 128 bit
+        let value = unsafe { *ptr };
+        let ret = u128::from_be(value);
+        println!("{}", ret);    // FIXME: remove this will break things ??? WTF
+        ret
     }
 
     fn get_time(&self) -> u128 {
