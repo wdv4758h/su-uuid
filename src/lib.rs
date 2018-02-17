@@ -10,6 +10,16 @@ use pyo3::ffi;
 use std::str::FromStr;
 
 
+fn clean_uuid_string(string: &str) -> String {
+    string.replace("urn:", "")
+          .replace("uuid:", "")
+          .trim_left_matches("{}")
+          .trim_right_matches("{}")
+          .replace("-", "")
+          .to_string()
+}
+
+
 #[py::class]
 struct UUID {
     py: PyToken,
@@ -33,30 +43,32 @@ impl UUID {
     }
 }
 
-               // bytes: Option<&[u8; 16]>,
-               // bytes_le: Option<&[u8; 16]>,
-               // int: Option<u128>,
-               // version: u8
-
-
 // implement FromPyObject for u128
 
 #[py::methods]
 impl UUID {
     #[new]
+    #[args(hex="None", bytes="None", bytes_le="None", fields="None", args="*")]
     fn __new__(obj: &PyRawObject,
-               hex: &str,
-               bytes: Vec<u8>,      // FIXME: use reference directly
-               bytes_le: Vec<u8>,   // FIXME: use reference directly
-               fields: (u32, u16, u16, u8, u8, u64))
+               hex: Option<Option<&str>>,
+               bytes: Option<Option<Vec<u8>>>,    // FIXME: use reference directly
+               bytes_le: Option<Option<Vec<u8>>>, // FIXME: use reference directly
+               fields: Option<Option<(u32, u16, u16, u8, u8, u64)>>,
+               args: &PyTuple)
       -> PyResult<()> {
 
+        let hex = hex.unwrap();
+        let bytes = bytes.unwrap();
+        let bytes_le = bytes_le.unwrap();
+        let fields = fields.unwrap();
+
         let uuid =
-            if !hex.is_empty() {
-                uuid::Uuid::from_str(hex).unwrap()
-            } else if !bytes.is_empty() {
+            if let Some(hex) = hex {
+                let string = clean_uuid_string(hex);
+                uuid::Uuid::from_str(&string).unwrap()
+            } else if let Some(bytes) = bytes {
                 uuid::Uuid::from_bytes(&bytes).unwrap()
-            } else if !bytes_le.is_empty() {
+            } else if let Some(bytes_le) = bytes_le {
                 // FIXME: do not create vector
                 let slice = bytes_le[..4].iter().rev()
                     .chain(bytes_le[4..6].iter().rev())
@@ -65,7 +77,7 @@ impl UUID {
                     .map(|n| *n);
                 uuid::Uuid::from_bytes(
                     slice.collect::<Vec<_>>().as_slice()).unwrap()
-            } else {
+            } else if let Some(fields) = fields {
                uuid::Uuid::from_fields(
                    fields.0,
                    fields.1,
@@ -77,6 +89,13 @@ impl UUID {
                     ((fields.5 >> 16) % 256) as u8,
                     ((fields.5 >>  8) % 256) as u8,
                     ((fields.5 >>  0) % 256) as u8]).unwrap()
+            } else {
+                use std::borrow::Borrow;
+                let pystring: &PyString = args.get_item(0).try_into().unwrap();
+                let cow_string = pystring.to_string().unwrap();
+                let string = cow_string.borrow();
+                let string = clean_uuid_string(string);
+                uuid::Uuid::from_str(&string).unwrap()
             };
 
         obj.init(|token| {
