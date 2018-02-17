@@ -47,7 +47,8 @@ impl PyUuid {
     #[new]
     fn __new__(obj: &PyRawObject,
                hex: &str,
-               bytes: Vec<u8>,  // FIXME: use reference directly
+               bytes: Vec<u8>,      // FIXME: use reference directly
+               bytes_le: Vec<u8>,   // FIXME: use reference directly
                fields: (u32, u16, u16, u8, u8, u64))
       -> PyResult<()> {
 
@@ -56,6 +57,14 @@ impl PyUuid {
                 Uuid::from_str(hex).unwrap()
             } else if !bytes.is_empty() {
                 Uuid::from_bytes(&bytes).unwrap()
+            } else if !bytes_le.is_empty() {
+                // FIXME: do not create vector
+                let slice = bytes_le[..4].iter().rev()
+                    .chain(bytes_le[4..6].iter().rev())
+                    .chain(bytes_le[6..8].iter().rev())
+                    .chain(bytes_le[8..].iter())
+                    .map(|n| *n);
+                Uuid::from_bytes(slice.collect::<Vec<_>>().as_slice()).unwrap()
             } else {
                Uuid::from_fields(fields.0,
                                  fields.1,
