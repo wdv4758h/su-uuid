@@ -34,17 +34,28 @@ impl PyUuid {
     }
 }
 
+               // bytes: Option<&[u8; 16]>,
+               // bytes_le: Option<&[u8; 16]>,
+               // int: Option<u128>,
+               // version: u8
+
+
+// implement FromPyObject for u128
+
 #[py::methods]
 impl PyUuid {
     #[new]
     fn __new__(obj: &PyRawObject,
                hex: &str,
+               bytes: Vec<u8>,  // FIXME: use reference directly
                fields: (u32, u16, u16, u8, u8, u64))
       -> PyResult<()> {
 
         let uuid =
             if !hex.is_empty() {
                 Uuid::from_str(hex).unwrap()
+            } else if !bytes.is_empty() {
+                Uuid::from_bytes(&bytes).unwrap()
             } else {
                Uuid::from_fields(fields.0,
                                  fields.1,
