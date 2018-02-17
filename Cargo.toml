@@ -8,4 +8,4 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 pyo3 = { version = "0.2.4", features = ["python3"] }
-uuid = { version = "0.6.0-beta", features = ["v1", "v3", "v4", "v5"] }
+uuid = { version = "0.6.0", features = ["v1", "v3", "v4", "v5"] }
