@@ -86,10 +86,14 @@ impl PyUuid {
     #[getter]
     pub fn bytes_le(&self) -> PyResult<PyObject> {
         // FIXME: do not make new vector
-        let mut data = self.data.as_bytes().to_vec();
-        data.reverse();
+        let data = self.data.as_bytes();
+        let slice = data[..4].iter().rev()
+            .chain(data[4..6].iter().rev())
+            .chain(data[6..8].iter().rev())
+            .chain(data[8..].iter())
+            .map(|n| *n);
         Ok(PyBytes::new(self.py(),
-                        &data).into())
+                        slice.collect::<Vec<_>>().as_slice()).into())
     }
 
     #[getter]
