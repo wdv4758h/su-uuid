@@ -7,17 +7,16 @@ extern crate uuid;
 
 use pyo3::prelude::*;
 use pyo3::ffi;
-use uuid::Uuid;
 use std::str::FromStr;
 
 
 #[py::class]
-struct PyUuid {
+struct UUID {
     py: PyToken,
     data: uuid::Uuid,
 }
 
-impl PyUuid {
+impl UUID {
     fn get_u128(&self) -> u128 {
         let ptr = self.data.as_bytes() as *const u8 as *const u128;
         // this is fine, the as_bytes() will return &[u8, 16], which is 128 bit
@@ -43,7 +42,7 @@ impl PyUuid {
 // implement FromPyObject for u128
 
 #[py::methods]
-impl PyUuid {
+impl UUID {
     #[new]
     fn __new__(obj: &PyRawObject,
                hex: &str,
@@ -54,9 +53,9 @@ impl PyUuid {
 
         let uuid =
             if !hex.is_empty() {
-                Uuid::from_str(hex).unwrap()
+                uuid::Uuid::from_str(hex).unwrap()
             } else if !bytes.is_empty() {
-                Uuid::from_bytes(&bytes).unwrap()
+                uuid::Uuid::from_bytes(&bytes).unwrap()
             } else if !bytes_le.is_empty() {
                 // FIXME: do not create vector
                 let slice = bytes_le[..4].iter().rev()
@@ -64,22 +63,24 @@ impl PyUuid {
                     .chain(bytes_le[6..8].iter().rev())
                     .chain(bytes_le[8..].iter())
                     .map(|n| *n);
-                Uuid::from_bytes(slice.collect::<Vec<_>>().as_slice()).unwrap()
+                uuid::Uuid::from_bytes(
+                    slice.collect::<Vec<_>>().as_slice()).unwrap()
             } else {
-               Uuid::from_fields(fields.0,
-                                 fields.1,
-                                 fields.2,
-                                 &[fields.3, fields.4,
-                                  ((fields.5 >> 40) % 256) as u8,
-                                  ((fields.5 >> 32) % 256) as u8,
-                                  ((fields.5 >> 24) % 256) as u8,
-                                  ((fields.5 >> 16) % 256) as u8,
-                                  ((fields.5 >>  8) % 256) as u8,
-                                  ((fields.5 >>  0) % 256) as u8]).unwrap()
+               uuid::Uuid::from_fields(
+                   fields.0,
+                   fields.1,
+                   fields.2,
+                   &[fields.3, fields.4,
+                    ((fields.5 >> 40) % 256) as u8,
+                    ((fields.5 >> 32) % 256) as u8,
+                    ((fields.5 >> 24) % 256) as u8,
+                    ((fields.5 >> 16) % 256) as u8,
+                    ((fields.5 >>  8) % 256) as u8,
+                    ((fields.5 >>  0) % 256) as u8]).unwrap()
             };
 
         obj.init(|token| {
-            PyUuid {
+            UUID {
                 py: token,
                 data: uuid,
             }
@@ -212,7 +213,7 @@ impl PyUuid {
 }
 
 #[py::proto]
-impl pyo3::class::basic::PyObjectProtocol for PyUuid {
+impl pyo3::class::basic::PyObjectProtocol for UUID {
     fn __str__(&self) -> PyResult<String> {
         Ok(self.data.hyphenated().to_string())
     }
@@ -228,13 +229,13 @@ impl pyo3::class::basic::PyObjectProtocol for PyUuid {
 
 pub fn register_constants(py: Python, m: &PyModule) -> PyResult<()> {
     m.add("NAMESPACE_DNS",
-          py.init(|token| PyUuid { py: token, data: uuid::NAMESPACE_DNS }).unwrap())?;
+          py.init(|token| UUID { py: token, data: uuid::NAMESPACE_DNS }).unwrap())?;
     m.add("NAMESPACE_OID",
-          py.init(|token| PyUuid { py: token, data: uuid::NAMESPACE_OID }).unwrap())?;
+          py.init(|token| UUID { py: token, data: uuid::NAMESPACE_OID }).unwrap())?;
     m.add("NAMESPACE_URL",
-          py.init(|token| PyUuid { py: token, data: uuid::NAMESPACE_URL }).unwrap())?;
+          py.init(|token| UUID { py: token, data: uuid::NAMESPACE_URL }).unwrap())?;
     m.add("NAMESPACE_X500",
-          py.init(|token| PyUuid { py: token, data: uuid::NAMESPACE_X500 }).unwrap())?;
+          py.init(|token| UUID { py: token, data: uuid::NAMESPACE_X500 }).unwrap())?;
 
     m.add("RFC_4122",
           format!("{:?}", uuid::UuidVariant::RFC4122))?;
@@ -249,7 +250,7 @@ pub fn register_constants(py: Python, m: &PyModule) -> PyResult<()> {
 }
 
 pub fn register_classes(py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_class::<PyUuid>()?;
+    m.add_class::<UUID>()?;
     Ok(())
 }
 
@@ -264,33 +265,33 @@ fn init_mod(py: Python, m: &PyModule) -> PyResult<()> {
     register_classes(py, m)?;
 
     #[pyfn(m, "uuid3")]
-    fn uuid3(py: Python, namespace: &PyUuid, name: &str)
-          -> PyResult<Py<PyUuid>> {
+    fn uuid3(py: Python, namespace: &UUID, name: &str)
+          -> PyResult<Py<UUID>> {
         py.init(|token| {
-            PyUuid {
+            UUID {
                 py: token,
-                data: Uuid::new_v3(&namespace.data, name),
+                data: uuid::Uuid::new_v3(&namespace.data, name),
             }
         })
     }
 
     #[pyfn(m, "uuid4")]
-    fn uuid4(py: Python) -> PyResult<Py<PyUuid>> {
+    fn uuid4(py: Python) -> PyResult<Py<UUID>> {
         py.init(|token| {
-            PyUuid {
+            UUID {
                 py: token,
-                data: Uuid::new_v4(),
+                data: uuid::Uuid::new_v4(),
             }
         })
     }
 
     #[pyfn(m, "uuid5")]
-    fn uuid5(py: Python, namespace: &PyUuid, name: &str)
-          -> PyResult<Py<PyUuid>> {
+    fn uuid5(py: Python, namespace: &UUID, name: &str)
+          -> PyResult<Py<UUID>> {
         py.init(|token| {
-            PyUuid {
+            UUID {
                 py: token,
-                data: Uuid::new_v5(&namespace.data, name),
+                data: uuid::Uuid::new_v5(&namespace.data, name),
             }
         })
     }
