@@ -252,7 +252,17 @@ impl pyo3::class::basic::PyObjectProtocol for UUID {
     fn __repr__(&self) -> PyResult<String> {
         Ok(format!("UUID('{}')", self.data.hyphenated().to_string()))
     }
+
+    fn __richcmp__(&self, other: &UUID, op: CompareOp) -> PyResult<bool> {
+        match op {
+            CompareOp::Eq => Ok(self.data == other.data),
+            CompareOp::Ne => Ok(self.data != other.data),
+            // FIXME: other ops
+            _ => Ok(false)
+        }
+    }
 }
+
 
 ////////////////////////////////////////
 // convient functions to make PyModule
