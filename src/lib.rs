@@ -260,8 +260,10 @@ impl pyo3::class::basic::PyObjectProtocol for UUID {
         match op {
             CompareOp::Eq => Ok(self.data == other.data),
             CompareOp::Ne => Ok(self.data != other.data),
-            // FIXME: other ops
-            _ => Ok(false)
+            CompareOp::Lt => Ok(self.data <  other.data),
+            CompareOp::Le => Ok(self.data <= other.data),
+            CompareOp::Gt => Ok(self.data >  other.data),
+            CompareOp::Ge => Ok(self.data >= other.data),
         }
     }
 }
