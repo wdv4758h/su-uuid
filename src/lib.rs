@@ -65,7 +65,13 @@ impl UUID {
         let uuid =
             if let Some(hex) = hex {
                 let string = clean_uuid_string(hex);
-                uuid::Uuid::from_str(&string).unwrap()
+                if string.len() != 32 {
+                    return Err(exc::ValueError.into());
+                }
+                match uuid::Uuid::from_str(&string) {
+                    Ok(uuid) => uuid,
+                    Err(_) => return Err(exc::ValueError.into()),
+                }
             } else if let Some(bytes) = bytes {
                 uuid::Uuid::from_bytes(&bytes).unwrap()
             } else if let Some(bytes_le) = bytes_le {
@@ -95,7 +101,13 @@ impl UUID {
                 let cow_string = pystring.to_string().unwrap();
                 let string = cow_string.borrow();
                 let string = clean_uuid_string(string);
-                uuid::Uuid::from_str(&string).unwrap()
+                if string.len() != 32 {
+                    return Err(exc::ValueError.into());
+                }
+                match uuid::Uuid::from_str(&string) {
+                    Ok(uuid) => uuid,
+                    Err(_) => return Err(exc::ValueError.into()),
+                }
             };
 
         obj.init(|token| {
