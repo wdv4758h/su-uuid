@@ -69,12 +69,9 @@ impl UUID {
                 if string.len() != 32 {
                     return Err(exc::ValueError.into());
                 }
-                match uuid::Uuid::from_str(&string) {
-                    Ok(uuid) => uuid,
-                    Err(_) => return Err(exc::ValueError.into()),
-                }
+                uuid::Uuid::from_str(&string)
             } else if let Some(bytes) = bytes {
-                uuid::Uuid::from_bytes(&bytes).unwrap()
+                uuid::Uuid::from_bytes(&bytes)
             } else if let Some(bytes_le) = bytes_le {
                 // FIXME: do not create vector
                 let slice = bytes_le[..4].iter().rev()
@@ -97,6 +94,9 @@ impl UUID {
                     ((fields.5 >>  8) % 256) as u8,
                     ((fields.5 >>  0) % 256) as u8]).unwrap()
             } else {
+                if args.is_empty() {
+                    return Err(exc::TypeError.into());
+                }
                 use std::borrow::Borrow;
                 let pystring: &PyString = args.get_item(0).try_into().unwrap();
                 let cow_string = pystring.to_string().unwrap();
@@ -105,11 +105,13 @@ impl UUID {
                 if string.len() != 32 {
                     return Err(exc::ValueError.into());
                 }
-                match uuid::Uuid::from_str(&string) {
-                    Ok(uuid) => uuid,
-                    Err(_) => return Err(exc::ValueError.into()),
-                }
+                uuid::Uuid::from_str(&string)
             };
+
+        let uuid = match uuid {
+            Ok(uuid) => uuid,
+            Err(_) => return Err(exc::ValueError.into()),
+        };
 
         obj.init(|token| {
             UUID {
