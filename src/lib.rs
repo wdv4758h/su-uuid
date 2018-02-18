@@ -8,6 +8,9 @@ extern crate uuid;
 use pyo3::prelude::*;
 use pyo3::ffi;
 use std::str::FromStr;
+use std::hash::{Hash, Hasher};
+use std::collections::hash_map::DefaultHasher;
+
 
 
 fn clean_uuid_string(string: &str) -> String {
@@ -41,6 +44,12 @@ impl UUID {
         (((self.data.as_fields().2 as u128 & 0x0fff) << 48) |
          ((self.data.as_fields().1 as u128) << 32) |
          self.data.as_fields().0 as u128)
+    }
+
+    fn hash(&self) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        self.data.hash(&mut hasher);
+        hasher.finish()
     }
 }
 
@@ -265,6 +274,10 @@ impl pyo3::class::basic::PyObjectProtocol for UUID {
             CompareOp::Gt => Ok(self.data >  other.data),
             CompareOp::Ge => Ok(self.data >= other.data),
         }
+    }
+
+    fn __hash__(&self) -> PyResult<isize> {
+        Ok(self.hash() as isize)
     }
 }
 
