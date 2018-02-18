@@ -11,10 +11,11 @@ use std::str::FromStr;
 
 
 fn clean_uuid_string(string: &str) -> String {
+    let patterns: &[_] = &['{', '}'];
     string.replace("urn:", "")
           .replace("uuid:", "")
-          .trim_left_matches("{}")
-          .trim_right_matches("{}")
+          .trim_left_matches(patterns)
+          .trim_right_matches(patterns)
           .replace("-", "")
           .to_string()
 }
