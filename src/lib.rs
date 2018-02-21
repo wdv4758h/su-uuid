@@ -72,6 +72,15 @@ impl UUID {
         let bytes_le = bytes_le.unwrap();
         let fields = fields.unwrap();
 
+        let args_count = [hex.is_some(),
+                          bytes.is_some(),
+                          bytes_le.is_some(),
+                          fields.is_some()].iter().filter(|i| **i).count();
+
+        if args_count > 1 {
+            return Err(exc::ValueError.into());
+        }
+
         let uuid =
             if let Some(hex) = hex {
                 let string = clean_uuid_string(hex);
