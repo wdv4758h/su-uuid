@@ -91,17 +91,21 @@ impl UUID {
                 uuid::Uuid::from_bytes(
                     slice.collect::<Vec<_>>().as_slice()).unwrap()
             } else if let Some(fields) = fields {
-               uuid::Uuid::from_fields(
-                   fields.0,
-                   fields.1,
-                   fields.2,
-                   &[fields.3, fields.4,
-                    ((fields.5 >> 40) % 256) as u8,
-                    ((fields.5 >> 32) % 256) as u8,
-                    ((fields.5 >> 24) % 256) as u8,
-                    ((fields.5 >> 16) % 256) as u8,
-                    ((fields.5 >>  8) % 256) as u8,
-                    ((fields.5 >>  0) % 256) as u8]).unwrap()
+                if fields.5 >= 0x1000000000000 {
+                    return Err(exc::ValueError.into());
+                }
+
+                uuid::Uuid::from_fields(
+                    fields.0,
+                    fields.1,
+                    fields.2,
+                    &[fields.3, fields.4,
+                     ((fields.5 >> 40) % 256) as u8,
+                     ((fields.5 >> 32) % 256) as u8,
+                     ((fields.5 >> 24) % 256) as u8,
+                     ((fields.5 >> 16) % 256) as u8,
+                     ((fields.5 >>  8) % 256) as u8,
+                     ((fields.5 >>  0) % 256) as u8])
             } else {
                 if args.is_empty() {
                     return Err(exc::TypeError.into());
