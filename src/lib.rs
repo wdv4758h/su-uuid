@@ -323,6 +323,62 @@ fn init_mod(py: Python, m: &PyModule) -> PyResult<()> {
     register_constants(py, m)?;
     register_classes(py, m)?;
 
+
+    #[pyfn(m, "uuid1", node="None", clock_seq="None", args="*")]
+    fn uuid1(py: Python,
+             node: Option<Option<u64>>,
+             clock_seq: Option<Option<u16>>,
+             args: &PyTuple)
+          -> PyResult<Py<UUID>> {
+
+        use std::time::{SystemTime, UNIX_EPOCH};
+
+        let node = node.unwrap();
+        let clock_seq = clock_seq.unwrap();
+
+        let clock_seq = if let Some(clock_seq) = clock_seq {
+            clock_seq
+        } else {
+            // FIXME: generate random number
+            0
+        };
+
+        let now = SystemTime::now();
+        let dur = now.duration_since(UNIX_EPOCH).unwrap();
+        let ctx = uuid::UuidV1Context::new(clock_seq);
+        let mut v = vec![];
+        let node: &[u8] =
+            if !args.is_empty() {
+                let pynode: &PyLong = args.get_item(0).try_into().unwrap();
+                let mut value: u64 = pynode.extract().unwrap();
+
+                // FIXME: more efficient implementation
+                while value > 0 {
+                    v.push((value % 256) as u8);
+                    value /= 256;
+                }
+                while v.len() != 6 {
+                    v.push(0);
+                }
+                v.reverse();
+                &v[..6]
+
+            } else {
+                // FIXME: real getnode function
+                &[1, 2, 3, 4, 5, 6]
+            };
+
+        py.init(|token| {
+            UUID {
+                py: token,
+                data: uuid::Uuid::new_v1(&ctx,
+                                         dur.as_secs(),
+                                         dur.subsec_nanos(),
+                                         node).unwrap(),
+            }
+        })
+    }
+
     #[pyfn(m, "uuid3")]
     fn uuid3(py: Python, namespace: &UUID, name: &str)
           -> PyResult<Py<UUID>> {
