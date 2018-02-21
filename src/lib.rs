@@ -3,6 +3,7 @@
 
 extern crate pyo3;
 extern crate uuid;
+extern crate arrayvec;
 
 
 use pyo3::prelude::*;
@@ -10,8 +11,38 @@ use pyo3::ffi;
 use std::str::FromStr;
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
+use std::io;
+use std::io::prelude::*;
+use arrayvec::ArrayVec;
 
 
+fn get_mac_addresses() -> io::Result<Vec<String>> {
+    use std::fs;
+    use std::path::Path;
+    let dir = Path::new("/sys/class/net");
+    if dir.is_dir() {
+        let mut addresses = vec![];
+        for entry in fs::read_dir(dir)? {
+            let entry = entry?;
+            let address_file = entry.path().join("address");
+            if address_file.exists() {
+                let mut contents = String::new();
+                fs::File::open(address_file)?.read_to_string(&mut contents)?;
+                contents.truncate(17);
+                addresses.push(contents);
+            }
+        }
+        Ok(addresses)
+    } else {
+        Ok(vec![])
+    }
+}
+
+fn get_node() -> ArrayVec<[u8; 16]> {
+    let addresses = get_mac_addresses().unwrap();
+    assert!(addresses.len() > 0);
+    addresses[0].split(':').map(|s| u8::from_str_radix(s, 16).unwrap()).collect()
+}
 
 fn clean_uuid_string(string: &str) -> String {
     let patterns: &[_] = &['{', '}'];
@@ -336,6 +367,11 @@ fn init_mod(py: Python, m: &PyModule) -> PyResult<()> {
     register_constants(py, m)?;
     register_classes(py, m)?;
 
+    #[pyfn(m, "getnode")]
+    fn getnode(py: Python) -> PyResult<u64> {
+        let node = get_node();
+        Ok(node.iter().fold(0_u64, |a, &b| { a*256+(b as u64) }))
+    }
 
     #[pyfn(m, "uuid1", node="None", clock_seq="None", args="*")]
     fn uuid1(py: Python,
@@ -360,10 +396,12 @@ fn init_mod(py: Python, m: &PyModule) -> PyResult<()> {
         let dur = now.duration_since(UNIX_EPOCH).unwrap();
         let ctx = uuid::UuidV1Context::new(clock_seq);
         let mut v = vec![];
+        let mut tmp;
         let node: &[u8] =
-            if !args.is_empty() {
-                let pynode: &PyLong = args.get_item(0).try_into().unwrap();
-                let mut value: u64 = pynode.extract().unwrap();
+            if node.is_some() {
+                // let pynode: &PyLong = args.get_item(0).try_into().unwrap();
+                // let mut value: u64 = pynode.extract().unwrap();
+                let mut value = node.unwrap();
 
                 // FIXME: more efficient implementation
                 while value > 0 {
@@ -377,8 +415,8 @@ fn init_mod(py: Python, m: &PyModule) -> PyResult<()> {
                 &v[..6]
 
             } else {
-                // FIXME: real getnode function
-                &[1, 2, 3, 4, 5, 6]
+                tmp = get_node();
+                tmp.as_slice()
             };
 
         py.init(|token| {
