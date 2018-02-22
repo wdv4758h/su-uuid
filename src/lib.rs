@@ -89,19 +89,18 @@ impl UUID {
 #[py::methods]
 impl UUID {
     #[new]
-    #[args(hex="None", bytes="None", bytes_le="None", fields="None", args="*")]
+    #[args(hex="None", bytes="None", bytes_le="None", args="*")]
     fn __new__(obj: &PyRawObject,
                hex: Option<Option<&str>>,
                bytes: Option<Option<Vec<u8>>>,    // FIXME: use reference directly
                bytes_le: Option<Option<Vec<u8>>>, // FIXME: use reference directly
-               fields: Option<Option<(u32, u16, u16, u8, u8, u64)>>,
+               fields: Option<(u32, u16, u16, u8, u8, u64)>,
                args: &PyTuple)
       -> PyResult<()> {
 
         let hex = hex.unwrap();
         let bytes = bytes.unwrap();
         let bytes_le = bytes_le.unwrap();
-        let fields = fields.unwrap();
 
         let args_count = [hex.is_some(),
                           bytes.is_some(),
@@ -373,17 +372,14 @@ fn init_mod(py: Python, m: &PyModule) -> PyResult<()> {
         Ok(node.iter().fold(0_u64, |a, &b| { a*256+(b as u64) }))
     }
 
-    #[pyfn(m, "uuid1", node="None", clock_seq="None", args="*")]
+    #[pyfn(m, "uuid1", args="*")]
     fn uuid1(py: Python,
-             node: Option<Option<u64>>,
-             clock_seq: Option<Option<u16>>,
+             node: Option<u64>,
+             clock_seq: Option<u16>,
              args: &PyTuple)
           -> PyResult<Py<UUID>> {
 
         use std::time::{SystemTime, UNIX_EPOCH};
-
-        let node = node.unwrap();
-        let clock_seq = clock_seq.unwrap();
 
         let clock_seq = if let Some(clock_seq) = clock_seq {
             clock_seq
