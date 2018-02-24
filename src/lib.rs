@@ -41,7 +41,8 @@ fn get_mac_addresses() -> io::Result<Vec<String>> {
 fn get_node() -> ArrayVec<[u8; 16]> {
     let addresses = get_mac_addresses().unwrap();
     assert!(addresses.len() > 0);
-    addresses[0].split(':').map(|s| u8::from_str_radix(s, 16).unwrap()).collect()
+    addresses.iter().filter(|s| !s.contains("00:00:00:00:00:00")).next().unwrap()
+             .split(':').map(|s| u8::from_str_radix(s, 16).unwrap()).collect()
 }
 
 fn clean_uuid_string(string: &str) -> String {
