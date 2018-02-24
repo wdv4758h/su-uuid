@@ -85,7 +85,21 @@ impl UUID {
     }
 }
 
-// implement FromPyObject for u128
+
+#[derive(Debug)]
+pub struct myu128 {
+    pub value: u128
+}
+
+impl<'src> FromPyObject<'src> for myu128 {
+    fn extract(ob: &'src PyObjectRef) -> PyResult<myu128> {
+        use std::borrow::Borrow;
+        let value_str: &PyString = ob.call_method("__str__", NoArgs, NoArgs)?.try_into()?;
+        let value = u128::from_str(value_str.to_string_lossy().borrow())?;
+        Ok(myu128 { value: value })
+    }
+}
+
 
 #[py::methods]
 impl UUID {
@@ -96,6 +110,7 @@ impl UUID {
                bytes: Option<Option<Vec<u8>>>,    // FIXME: use reference directly
                bytes_le: Option<Option<Vec<u8>>>, // FIXME: use reference directly
                fields: Option<(u32, u16, u16, u8, u8, u64)>,
+               int: Option<myu128>,
                args: &PyTuple)
       -> PyResult<()> {
 
@@ -146,6 +161,19 @@ impl UUID {
                      ((fields.5 >> 16) % 256) as u8,
                      ((fields.5 >>  8) % 256) as u8,
                      ((fields.5 >>  0) % 256) as u8])
+            } else if let Some(int) = int {
+                let mut value = int.value;
+                let mut v = vec![];
+                while value > 0 {
+                    v.push((value % 256) as u8);
+                    value /= 256;
+                }
+                while v.len() < 16 {
+                    v.push(0);
+                }
+                v.reverse();
+
+                uuid::Uuid::from_bytes(v.as_slice())
             } else {
                 if args.is_empty() {
                     return Err(exc::TypeError.into());
