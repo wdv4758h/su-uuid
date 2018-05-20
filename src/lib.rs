@@ -323,8 +323,12 @@ impl UUID {
     }
 
     #[getter]
-    pub fn version(&self) -> PyResult<usize> {
-        Ok(self.data.get_version_num())
+    pub fn version(&self) -> PyResult<PyObject> {
+        let ver = self.data.get_version_num();
+        if ver == 0 {
+            return Ok(self.py().None());
+        }
+        Ok(ver.to_object(self.py()))
     }
 }
 
