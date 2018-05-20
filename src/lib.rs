@@ -1,5 +1,6 @@
 #![feature(i128_type)]
 #![feature(proc_macro, specialization, const_fn)]
+#![feature(proc_macro_path_invoc)]
 
 extern crate pyo3;
 extern crate uuid;
@@ -144,7 +145,7 @@ impl UUID {
                     .chain(bytes_le[8..].iter())
                     .map(|n| *n);
                 uuid::Uuid::from_bytes(
-                    slice.collect::<Vec<_>>().as_slice()).unwrap()
+                    slice.collect::<Vec<_>>().as_slice())
             } else if let Some(fields) = fields {
                 if fields.5 >= 0x1000000000000 {
                     return Err(exc::ValueError.into());

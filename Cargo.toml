@@ -7,6 +7,6 @@ version = "0.1.0"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-pyo3 = { version = "0.2.5", features = ["python3"] }
-uuid = { version = "0.6.0", features = ["v1", "v3", "v4", "v5"] }
+pyo3 = { version = "0.2.7", features = ["python3"] }
+uuid = { version = "0.6.3", features = ["v1", "v3", "v4", "v5"] }
 arrayvec = { version = "0.4.7" }
