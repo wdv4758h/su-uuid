@@ -241,19 +241,8 @@ impl UUID {
     }
 
     #[getter]
-    pub fn int(&self) -> PyResult<PyObject> {
-        // FIXME: use a more light weight way to make PyLong for u128
-        let num_string = format!("{}", self.get_u128());
-        Ok(unsafe {
-            PyObject::from_owned_ptr_or_panic(
-                self.py(),
-                ffi::PyLong_FromString(
-                    num_string.as_ptr() as *const i8,
-                    0 as *mut *mut i8,
-                    0_i32
-                )
-            )
-        })
+    pub fn int(&self) -> PyResult<u128> {
+        Ok(self.get_u128())
     }
 
     #[getter]
@@ -341,6 +330,15 @@ impl pyo3::class::basic::PyObjectProtocol for UUID {
         Ok(self.hash() as isize)
     }
 }
+
+
+#[pyproto]
+impl PyNumberProtocol for UUID {
+    fn __int__(&self) -> PyResult<u128> {
+        self.int()
+    }
+}
+
 
 
 ////////////////////////////////////////
