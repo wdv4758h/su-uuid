@@ -8,7 +8,6 @@ extern crate arrayvec;
 
 use pyo3::prelude::*;
 use pyo3::{pymodinit, pyproto, pyclass, pymethods};
-use pyo3::ffi;
 use std::str::FromStr;
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
@@ -259,19 +258,9 @@ impl UUID {
     }
 
     #[getter]
-    pub fn time(&self) -> PyResult<PyObject> {
+    pub fn time(&self) -> PyResult<u128> {
         // 60 bits timestamp
-        let num_string = format!("{}\0", self.get_time());
-        Ok(unsafe {
-            PyObject::from_owned_ptr_or_panic(
-                self.py(),
-                ffi::PyLong_FromString(
-                    num_string.as_ptr() as *const i8,
-                    0 as *mut *mut i8,
-                    0_i32
-                )
-            )
-        })
+        Ok(self.get_time())
     }
 
     #[getter]
