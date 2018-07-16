@@ -8,6 +8,7 @@ extern crate arrayvec;
 
 
 use pyo3::prelude::*;
+use pyo3::{pymodinit, pyproto, pyclass, pymethods};
 use pyo3::ffi;
 use std::str::FromStr;
 use std::hash::{Hash, Hasher};
@@ -57,7 +58,7 @@ fn clean_uuid_string(string: &str) -> String {
 }
 
 
-#[py::class]
+#[pyclass]
 struct UUID {
     py: PyToken,
     data: uuid::Uuid,
@@ -69,7 +70,6 @@ impl UUID {
         // this is fine, the as_bytes() will return &[u8, 16], which is 128 bit
         let value = unsafe { *ptr };
         let ret = u128::from_be(value);
-        println!("{}", ret);    // FIXME: remove this will break things ??? WTF
         ret
     }
 
@@ -87,22 +87,7 @@ impl UUID {
 }
 
 
-#[derive(Debug)]
-pub struct myu128 {
-    pub value: u128
-}
-
-impl<'src> FromPyObject<'src> for myu128 {
-    fn extract(ob: &'src PyObjectRef) -> PyResult<myu128> {
-        use std::borrow::Borrow;
-        let value_str: &PyString = ob.call_method("__str__", NoArgs, NoArgs)?.try_into()?;
-        let value = u128::from_str(value_str.to_string_lossy().borrow())?;
-        Ok(myu128 { value: value })
-    }
-}
-
-
-#[py::methods]
+#[pymethods]
 impl UUID {
     #[new]
     #[args(hex="None", bytes="None", bytes_le="None", args="*")]
@@ -111,7 +96,7 @@ impl UUID {
                bytes: Option<Option<Vec<u8>>>,    // FIXME: use reference directly
                bytes_le: Option<Option<Vec<u8>>>, // FIXME: use reference directly
                fields: Option<(u32, u16, u16, u8, u8, u64)>,
-               int: Option<myu128>,
+               int: Option<u128>,
                args: &PyTuple)
       -> PyResult<()> {
 
@@ -163,7 +148,7 @@ impl UUID {
                      ((fields.5 >>  8) % 256) as u8,
                      ((fields.5 >>  0) % 256) as u8])
             } else if let Some(int) = int {
-                let mut value = int.value;
+                let mut value = int;
                 let mut v = vec![];
                 while value > 0 {
                     v.push((value % 256) as u8);
@@ -332,7 +317,7 @@ impl UUID {
     }
 }
 
-#[py::proto]
+#[pyproto]
 impl pyo3::class::basic::PyObjectProtocol for UUID {
     fn __str__(&self) -> PyResult<String> {
         Ok(self.data.hyphenated().to_string())
@@ -395,8 +380,8 @@ pub fn register_classes(py: Python, m: &PyModule) -> PyResult<()> {
 // CPython's entry point
 ////////////////////////////////////////
 
-#[py::modinit(uuid_rpy)]
-fn init_mod(py: Python, m: &PyModule) -> PyResult<()> {
+#[pymodinit]
+fn uuid_rpy(py: Python, m: &PyModule) -> PyResult<()> {
     register_constants(py, m)?;
     register_classes(py, m)?;
 
