@@ -1,3 +1,13 @@
+###############################################
+# import from CPython's "Lib/test/test_uuid.py"
+#
+# modification
+#
+# * comment out test for "py_uuid" and "c_uuid"
+# * add test for "rs_uuid"
+#
+###############################################
+
 import unittest.mock
 from test import support
 import builtins
@@ -7,8 +17,9 @@ import os
 import shutil
 import subprocess
 
-py_uuid = support.import_fresh_module('uuid', blocked=['_uuid'])
-c_uuid = support.import_fresh_module('uuid', fresh=['_uuid'])
+# py_uuid = support.import_fresh_module('uuid', blocked=['_uuid'])
+# c_uuid = support.import_fresh_module('uuid', fresh=['_uuid'])
+rs_uuid = support.import_fresh_module('uuid_rpy', fresh=['_uuid'])
 
 
 def importable(name):
@@ -503,13 +514,15 @@ class BaseTestUUID:
             self.assertNotEqual(parent_value, child_value)
 
 
-class TestUUIDWithoutExtModule(BaseTestUUID, unittest.TestCase):
-    uuid = py_uuid
+# class TestUUIDWithoutExtModule(BaseTestUUID, unittest.TestCase):
+#     uuid = py_uuid
 
-@unittest.skipUnless(c_uuid, 'requires the C _uuid module')
-class TestUUIDWithExtModule(BaseTestUUID, unittest.TestCase):
-    uuid = c_uuid
+# @unittest.skipUnless(c_uuid, 'requires the C _uuid module')
+# class TestUUIDWithExtModule(BaseTestUUID, unittest.TestCase):
+#     uuid = c_uuid
 
+class TestUUIDWithRustExtModule(BaseTestUUID, unittest.TestCase):
+    uuid = rs_uuid
 
 class BaseTestInternals:
     uuid = None
@@ -611,12 +624,12 @@ eth0      Link encap:Ethernet  HWaddr 12:34:56:78:90:ab
         self.check_node(node)
 
 
-class TestInternalsWithoutExtModule(BaseTestInternals, unittest.TestCase):
-    uuid = py_uuid
+# class TestInternalsWithoutExtModule(BaseTestInternals, unittest.TestCase):
+#     uuid = py_uuid
 
-@unittest.skipUnless(c_uuid, 'requires the C _uuid module')
-class TestInternalsWithExtModule(BaseTestInternals, unittest.TestCase):
-    uuid = c_uuid
+# @unittest.skipUnless(c_uuid, 'requires the C _uuid module')
+# class TestInternalsWithExtModule(BaseTestInternals, unittest.TestCase):
+#     uuid = c_uuid
 
 
 if __name__ == '__main__':
