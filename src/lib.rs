@@ -400,7 +400,7 @@ fn uuid_rpy(py: Python, m: &PyModule) -> PyResult<()> {
     fn uuid1(py: Python,
              node: Option<u64>,
              clock_seq: Option<u16>,
-             _args: &PyTuple)
+             _args: Option<&PyTuple>)
           -> PyResult<Py<UUID>> {
 
         use std::time::{SystemTime, UNIX_EPOCH};
