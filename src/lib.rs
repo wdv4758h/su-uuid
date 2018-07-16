@@ -1,4 +1,3 @@
-#![feature(i128_type)]
 #![feature(proc_macro, specialization, const_fn)]
 #![feature(proc_macro_path_invoc)]
 
@@ -370,7 +369,7 @@ pub fn register_constants(py: Python, m: &PyModule) -> PyResult<()> {
     Ok(())
 }
 
-pub fn register_classes(py: Python, m: &PyModule) -> PyResult<()> {
+pub fn register_classes(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<UUID>()?;
     Ok(())
 }
@@ -386,7 +385,7 @@ fn uuid_rpy(py: Python, m: &PyModule) -> PyResult<()> {
     register_classes(py, m)?;
 
     #[pyfn(m, "getnode")]
-    fn getnode(py: Python) -> PyResult<u64> {
+    fn getnode(_py: Python) -> PyResult<u64> {
         let node = get_node();
         Ok(node.iter().fold(0_u64, |a, &b| { a*256+(b as u64) }))
     }
@@ -395,7 +394,7 @@ fn uuid_rpy(py: Python, m: &PyModule) -> PyResult<()> {
     fn uuid1(py: Python,
              node: Option<u64>,
              clock_seq: Option<u16>,
-             args: &PyTuple)
+             _args: &PyTuple)
           -> PyResult<Py<UUID>> {
 
         use std::time::{SystemTime, UNIX_EPOCH};
@@ -411,7 +410,7 @@ fn uuid_rpy(py: Python, m: &PyModule) -> PyResult<()> {
         let dur = now.duration_since(UNIX_EPOCH).unwrap();
         let ctx = uuid::UuidV1Context::new(clock_seq);
         let mut v = vec![];
-        let mut tmp;
+        let tmp;
         let node: &[u8] =
             if node.is_some() {
                 // let pynode: &PyLong = args.get_item(0).try_into().unwrap();
