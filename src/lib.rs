@@ -14,6 +14,8 @@ use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
 use std::io;
 use std::io::prelude::*;
+use std::ops::BitAnd;
+use std::ops::BitOr;
 use arrayvec::ArrayVec;
 
 
@@ -207,8 +209,12 @@ impl UUID {
     }
 
     #[getter]
-    pub fn clock_seq(&self) -> PyResult<u8> {
-        Ok(self.data.as_fields().3[1])
+    pub fn clock_seq(&self) -> PyResult<u16> {
+        let hi = self.data.as_fields().3[0] as u16;
+        let low = self.data.as_fields().3[1] as u16;
+        Ok(hi.bitand(0x3f)
+             .wrapping_shl(8)
+             .bitor(low))
     }
 
     #[getter]
