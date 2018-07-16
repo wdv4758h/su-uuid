@@ -303,11 +303,13 @@ impl UUID {
 
     #[getter]
     pub fn version(&self) -> PyResult<PyObject> {
-        let ver = self.data.get_version_num();
-        if ver == 0 {
-            return Ok(self.py().None());
+        match self.data.get_variant() {
+            // the version bits are only meaningful for RFC 4122 UUIDs
+            Some(uuid::UuidVariant::RFC4122) => {
+                Ok(self.data.get_version_num().to_object(self.py()))
+            },
+            _ => Ok(self.py().None()),
         }
-        Ok(ver.to_object(self.py()))
     }
 }
 
