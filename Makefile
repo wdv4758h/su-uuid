@@ -1,5 +1,5 @@
 wheel:
-	python3 setup.py bdist_wheel
+	RUSTFLAGS="-C link-arg=-s" python3 setup.py bdist_wheel
 
 install: wheel
 	pip3 install dist/su_uuid-*.whl --upgrade
