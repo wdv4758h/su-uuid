@@ -19,7 +19,7 @@ import subprocess
 
 # py_uuid = support.import_fresh_module('uuid', blocked=['_uuid'])
 # c_uuid = support.import_fresh_module('uuid', fresh=['_uuid'])
-rs_uuid = support.import_fresh_module('uuid_rpy', fresh=['_uuid'])
+rs_uuid = support.import_fresh_module('su_uuid', fresh=['_uuid'])
 
 
 def importable(name):

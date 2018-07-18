@@ -375,7 +375,7 @@ pub fn register_classes(_py: Python, m: &PyModule) -> PyResult<()> {
 ////////////////////////////////////////
 
 #[pymodinit]
-fn uuid_rpy(py: Python, m: &PyModule) -> PyResult<()> {
+fn su_uuid(py: Python, m: &PyModule) -> PyResult<()> {
     register_constants(py, m)?;
     register_classes(py, m)?;
 

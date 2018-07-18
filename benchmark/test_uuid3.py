@@ -1,6 +1,6 @@
 import pytest
 import uuid as py_uuid
-import uuid_rpy as rs_uuid
+import su_uuid as rs_uuid
 
 
 @pytest.mark.benchmark(group='uuid3')

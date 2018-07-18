@@ -1,6 +1,6 @@
 [package]
 authors = ["Chiu-Hsiang Hsu <wdv4758h@gmail.com>"]
-name = "uuid-rpy"
+name = "su-uuid"
 version = "0.1.0"
 
 [lib]
