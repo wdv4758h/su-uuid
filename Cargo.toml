@@ -10,3 +10,4 @@ crate-type = ["cdylib", "rlib"]
 pyo3 = { git = "https://github.com/PyO3/pyo3", rev = "fe931a594f9facaa5562a55ee1c01cce62036c0c", default-features = false }
 uuid = { version = "0.6.3", features = ["v1", "v3", "v4", "v5"] }
 arrayvec = { version = "0.4.7" }
+lazy_static = "1.0.2"

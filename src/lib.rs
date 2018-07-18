@@ -4,6 +4,8 @@
 extern crate pyo3;
 extern crate uuid;
 extern crate arrayvec;
+#[macro_use]
+extern crate lazy_static;
 
 
 use pyo3::prelude::*;
@@ -405,7 +407,6 @@ fn su_uuid(py: Python, m: &PyModule) -> PyResult<()> {
         let dur = now.duration_since(UNIX_EPOCH).unwrap();
         let ctx = uuid::UuidV1Context::new(clock_seq);
         let mut v = vec![];
-        let tmp;
         let node: &[u8] =
             if node.is_some() {
                 // let pynode: &PyLong = args.get_item(0).try_into().unwrap();
@@ -424,8 +425,10 @@ fn su_uuid(py: Python, m: &PyModule) -> PyResult<()> {
                 &v[..6]
 
             } else {
-                tmp = get_node();
-                tmp.as_slice()
+                lazy_static! {
+                  static ref NODE: ArrayVec<[u8; 16]> = get_node();
+                }
+                NODE.as_slice()
             };
 
         py.init(|token| {
