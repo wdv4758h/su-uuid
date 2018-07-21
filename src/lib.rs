@@ -74,7 +74,7 @@ fn get_mac_addresses() -> io::Result<Vec<String>> {
     }
 }
 
-fn get_node() -> ArrayVec<[u8; 16]> {
+fn get_node() -> ArrayVec<[u8; 6]> {
     let addresses = get_mac_addresses().unwrap();
     assert!(addresses.len() > 0);
     addresses.iter().filter(|s| !s.contains("00:00:00:00:00:00")).next().unwrap()
@@ -196,33 +196,21 @@ impl UUID {
                     return Err(exc::ValueError::new("field 6 out of range (need a 48-bit value)"));
                 }
 
+                let ptr = (&fields.5) as *const u64 as *const [u8; 8];
+                // this is safe, we have exactly that size of data
+                let node = unsafe { *ptr };
+
                 uuid::Uuid::from_fields(
                     fields.0,
                     fields.1,
                     fields.2,
                     &[fields.3, fields.4,
-                    // FIXME: better way ? with bit struct ?
-                     ((fields.5 >> 40) % 256) as u8,
-                     ((fields.5 >> 32) % 256) as u8,
-                     ((fields.5 >> 24) % 256) as u8,
-                     ((fields.5 >> 16) % 256) as u8,
-                     ((fields.5 >>  8) % 256) as u8,
-                     ((fields.5 >>  0) % 256) as u8])
+                      node[5], node[4],
+                      node[3], node[2],
+                      node[1], node[0]])
             // check the "int"
             } else if let Some(int) = int {
-                // FIXME: more efficient implementation
-                let mut value = int;
-                let mut v = vec![];
-                while value > 0 {
-                    v.push((value % 256) as u8);
-                    value /= 256;
-                }
-                while v.len() < 16 {
-                    v.push(0);
-                }
-                v.reverse();
-
-                uuid::Uuid::from_bytes(v.as_slice())
+                Ok(uuid::Uuid::from_u128(int.swap_bytes()))
             } else {
                 // we shouldn't go here
                 unreachable!()
@@ -487,29 +475,21 @@ fn su_uuid(py: Python, m: &PyModule) -> PyResult<()> {
         let now = SystemTime::now();
         let dur = now.duration_since(UNIX_EPOCH).unwrap();
         let ctx = uuid::UuidV1Context::new(clock_seq);
-        let mut v = vec![];
-        let node: &[u8] =
+
+        let node: ArrayVec<[u8; 6]> =
             if node.is_some() {
-                // let pynode: &PyLong = args.get_item(0).try_into().unwrap();
-                // let mut value: u64 = pynode.extract().unwrap();
                 let mut value = node.unwrap();
 
-                // FIXME: more efficient implementation
-                while value > 0 {
-                    v.push((value % 256) as u8);
-                    value /= 256;
-                }
-                while v.len() != 6 {
-                    v.push(0);
-                }
-                v.reverse();
-                &v[..6]
+                let ptr = (&value) as *const u64 as *const [u8; 8];
+                // this is safe, we have exactly that size of data
+                let tmp = unsafe { *ptr };
+                tmp.iter().rev().skip(2).map(|x| *x).collect()
 
             } else {
                 lazy_static! {
-                  static ref NODE: ArrayVec<[u8; 16]> = get_node();
+                  static ref NODE: ArrayVec<[u8; 6]> = get_node();
                 }
-                NODE.as_slice()
+                NODE.clone()
             };
 
         py.init(|token| {
@@ -518,7 +498,7 @@ fn su_uuid(py: Python, m: &PyModule) -> PyResult<()> {
                 data: uuid::Uuid::new_v1(&ctx,
                                          dur.as_secs(),
                                          dur.subsec_nanos(),
-                                         node).unwrap(),
+                                         &node).unwrap(),
             }
         })
     }
