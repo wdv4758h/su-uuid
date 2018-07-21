@@ -1,6 +1,10 @@
-#![feature(proc_macro, specialization, const_fn)]
-#![feature(proc_macro_path_invoc)]
-#![feature(concat_idents)]
+//! Python "uuid" module in Rust, as CPython extension.
+//! Wrapping the Rust "uuid" crate up to Python with PyO3.
+
+#![feature(proc_macro)]     // for "pyfn" "pyfunction" "pymodinit" "pyproto" ...
+#![feature(specialization)] // for "pymethods" "pyclass"
+#![feature(concat_idents)]  // for "wrap_function!"
+#![allow(non_snake_case)]   // don't show warning for "wrap_function!" related stuff
 
 
 extern crate pyo3;
@@ -13,7 +17,7 @@ extern crate lazy_static;
 use pyo3::prelude::*;
 use pyo3::{pymodinit, pyproto, pyclass, pymethods, pyfunction};
 use pyo3::wrap_function;
-use pyo3::{PyErr, exc};
+use pyo3::exc;
 use std::str::FromStr;
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
@@ -78,13 +82,13 @@ fn get_node() -> ArrayVec<[u8; 16]> {
 }
 
 fn clean_uuid_string(string: &str) -> String {
+    // FIXME: probably use "trim_matches" here
     let patterns: &[_] = &['{', '}'];
     string.replace("urn:", "")
           .replace("uuid:", "")
           .trim_left_matches(patterns)
           .trim_right_matches(patterns)
           .replace("-", "")
-          .to_string()
 }
 
 
@@ -117,50 +121,60 @@ impl UUID {
 }
 
 
+/// create the UUID instance
+///
+/// UUID('{12345678-1234-5678-1234-567812345678}')
+/// UUID('12345678123456781234567812345678')
+/// UUID('urn:uuid:12345678-1234-5678-1234-567812345678')
+/// UUID(bytes='\x12\x34\x56\x78'*4)
+/// UUID(bytes_le='\x78\x56\x34\x12\x34\x12\x78\x56' +
+///               '\x12\x34\x56\x78\x12\x34\x56\x78')
+/// UUID(fields=(0x12345678, 0x1234, 0x5678, 0x12, 0x34, 0x567812345678))
+/// UUID(int=0x12345678123456781234567812345678)
+///
 #[pymethods]
 impl UUID {
     #[new]
     #[args(hex="None", bytes="None", bytes_le="None", args="*")]
     fn __new__(obj: &PyRawObject,
                hex: Option<Option<&str>>,
+               // FIXME: use [u8; 16]
                bytes: Option<Option<Vec<u8>>>,    // FIXME: use reference directly
+               // FIXME: use [u8; 16]
                bytes_le: Option<Option<Vec<u8>>>, // FIXME: use reference directly
                fields: Option<(u32, u16, u16, u8, u8, u64)>,
                int: Option<u128>,
-               version: Option<u8>,
-               args: &PyTuple)
+               version: Option<u8>)
       -> PyResult<()> {
 
+        // FIXME: remove this nested "Option"
         let hex = hex.unwrap();
         let bytes = bytes.unwrap();
         let bytes_le = bytes_le.unwrap();
 
+        // check the arguments count, we shouldn't have multiple of them
         let args_count = [hex.is_some(),
                           bytes.is_some(),
                           bytes_le.is_some(),
-                          int.is_some(),
-                          fields.is_some()].iter().filter(|i| **i).count();
-
-        if args_count > 1 {
-            return Err(exc::TypeError.into());
-        }
-
-        if let Some(version) = version {
-            if (version < 1) || (version > 5) {
-                return Err(exc::ValueError::new("illegal version number"));
-            }
+                          fields.is_some(),
+                          int.is_some()].iter().filter(|i| **i).count();
+        if (args_count > 1) || (args_count == 0) {
+            return Err(exc::TypeError::new("passing wrong number of arguments"));
         }
 
         let uuid =
+            // check the "hex"
             if let Some(hex) = hex {
                 let string = clean_uuid_string(hex);
                 if string.len() != 32 {
-                    return Err(exc::ValueError.into());
+                    return Err(exc::ValueError::new("badly formed hexadecimal UUID string"));
                 }
                 uuid::Uuid::from_str(&string)
-            } else if let Some(bytes) = bytes {
-                uuid::Uuid::from_bytes(&bytes)
+            // check the "bytes_le"
             } else if let Some(bytes_le) = bytes_le {
+                if bytes_le.len() != 16 {
+                    return Err(exc::ValueError::new("bytes_le is not a 16-char string"));
+                }
                 // FIXME: do not create vector
                 let slice = bytes_le[..4].iter().rev()
                     .chain(bytes_le[4..6].iter().rev())
@@ -169,9 +183,17 @@ impl UUID {
                     .map(|n| *n);
                 uuid::Uuid::from_bytes(
                     slice.collect::<Vec<_>>().as_slice())
+            // check the "bytes"
+            } else if let Some(bytes) = bytes {
+                if bytes.len() != 16 {
+                    return Err(exc::ValueError::new("bytes is not a 16-char string"));
+                }
+                uuid::Uuid::from_bytes(&bytes)
+            // check the "fields"
             } else if let Some(fields) = fields {
-                if fields.5 >= 0x1000000000000 {
-                    return Err(exc::ValueError.into());
+                // node field actually only have 48 bits
+                if fields.5 >= (1 << 48) {
+                    return Err(exc::ValueError::new("field 6 out of range (need a 48-bit value)"));
                 }
 
                 uuid::Uuid::from_fields(
@@ -179,13 +201,16 @@ impl UUID {
                     fields.1,
                     fields.2,
                     &[fields.3, fields.4,
+                    // FIXME: better way ? with bit struct ?
                      ((fields.5 >> 40) % 256) as u8,
                      ((fields.5 >> 32) % 256) as u8,
                      ((fields.5 >> 24) % 256) as u8,
                      ((fields.5 >> 16) % 256) as u8,
                      ((fields.5 >>  8) % 256) as u8,
                      ((fields.5 >>  0) % 256) as u8])
+            // check the "int"
             } else if let Some(int) = int {
+                // FIXME: more efficient implementation
                 let mut value = int;
                 let mut v = vec![];
                 while value > 0 {
@@ -199,23 +224,23 @@ impl UUID {
 
                 uuid::Uuid::from_bytes(v.as_slice())
             } else {
-                if args.is_empty() {
-                    return Err(exc::TypeError.into());
-                }
-                use std::borrow::Borrow;
-                let pystring: &PyString = args.get_item(0).try_into().unwrap();
-                let cow_string = pystring.to_string().unwrap();
-                let string = cow_string.borrow();
-                let string = clean_uuid_string(string);
-                if string.len() != 32 {
-                    return Err(exc::ValueError.into());
-                }
-                uuid::Uuid::from_str(&string)
+                // we shouldn't go here
+                unreachable!()
             };
+
+        // check "version"
+        if let Some(version) = version {
+            if (version < 1) || (version > 5) {
+                return Err(exc::ValueError::new("illegal version number"));
+            }
+            // FIXME: set the version into UUID instance
+        }
+
+        // FIXME: set the "is_safe" attribute
 
         let uuid = match uuid {
             Ok(uuid) => uuid,
-            Err(_) => return Err(exc::ValueError.into()),
+            Err(e) => return Err(exc::ValueError::new(format!("UUID creation has error: {}", e))),
         };
 
         obj.init(|token| {
