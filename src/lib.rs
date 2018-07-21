@@ -100,11 +100,9 @@ struct UUID {
 
 impl UUID {
     fn get_u128(&self) -> u128 {
-        let ptr = self.data.as_bytes() as *const u8 as *const u128;
-        // this is fine, the as_bytes() will return &[u8, 16], which is 128 bit
-        let value = unsafe { *ptr };
-        let ret = u128::from_be(value);
-        ret
+        u128::from_be(
+          u128::from_bytes(
+            *self.data.as_bytes()))
     }
 
     fn get_time(&self) -> u128 {
@@ -196,9 +194,7 @@ impl UUID {
                     return Err(exc::ValueError::new("field 6 out of range (need a 48-bit value)"));
                 }
 
-                let ptr = (&fields.5) as *const u64 as *const [u8; 8];
-                // this is safe, we have exactly that size of data
-                let node = unsafe { *ptr };
+                let node = fields.5.to_bytes();
 
                 uuid::Uuid::from_fields(
                     fields.0,
@@ -210,7 +206,7 @@ impl UUID {
                       node[1], node[0]])
             // check the "int"
             } else if let Some(int) = int {
-                Ok(uuid::Uuid::from_u128(int.swap_bytes()))
+                Ok(uuid::Uuid::from_u128(u128::from_be(int)))
             } else {
                 // we shouldn't go here
                 unreachable!()
@@ -477,14 +473,10 @@ fn su_uuid(py: Python, m: &PyModule) -> PyResult<()> {
         let ctx = uuid::UuidV1Context::new(clock_seq);
 
         let node: ArrayVec<[u8; 6]> =
-            if node.is_some() {
-                let mut value = node.unwrap();
-
-                let ptr = (&value) as *const u64 as *const [u8; 8];
-                // this is safe, we have exactly that size of data
-                let tmp = unsafe { *ptr };
-                tmp.iter().rev().skip(2).map(|x| *x).collect()
-
+            if let Some(node) = node {
+                node.swap_bytes()
+                    .to_bytes()[2..]
+                    .iter().map(|x| *x).collect()
             } else {
                 lazy_static! {
                   static ref NODE: ArrayVec<[u8; 6]> = get_node();
