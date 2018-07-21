@@ -173,14 +173,15 @@ impl UUID {
                 if bytes_le.len() != 16 {
                     return Err(exc::ValueError::new("bytes_le is not a 16-char string"));
                 }
-                // FIXME: do not create vector
-                let slice = bytes_le[..4].iter().rev()
-                    .chain(bytes_le[4..6].iter().rev())
-                    .chain(bytes_le[6..8].iter().rev())
-                    .chain(bytes_le[8..].iter())
-                    .map(|n| *n);
-                uuid::Uuid::from_bytes(
-                    slice.collect::<Vec<_>>().as_slice())
+
+                let data: ArrayVec<[u8; 16]> =
+                    bytes_le[..4].iter().rev()
+                                 .chain(bytes_le[4..6].iter().rev())
+                                 .chain(bytes_le[6..8].iter().rev())
+                                 .chain(bytes_le[8..].iter())
+                                 .map(|n| *n).collect();
+                uuid::Uuid::from_bytes(&data)
+
             // check the "bytes"
             } else if let Some(bytes) = bytes {
                 if bytes.len() != 16 {
@@ -243,15 +244,15 @@ impl UUID {
 
     #[getter]
     pub fn bytes_le(&self) -> PyResult<PyObject> {
-        // FIXME: do not make new vector
         let data = self.data.as_bytes();
-        let slice = data[..4].iter().rev()
-            .chain(data[4..6].iter().rev())
-            .chain(data[6..8].iter().rev())
-            .chain(data[8..].iter())
-            .map(|n| *n);
+        let bytes: ArrayVec<[u8; 16]> =
+            data[..4].iter().rev()
+                     .chain(data[4..6].iter().rev())
+                     .chain(data[6..8].iter().rev())
+                     .chain(data[8..].iter())
+                     .map(|n| *n).collect();
         Ok(PyBytes::new(self.py(),
-                        slice.collect::<Vec<_>>().as_slice()).into())
+                        &bytes).into())
     }
 
     #[getter]
@@ -280,9 +281,11 @@ impl UUID {
         let time_hi_version = self.data.as_fields().2;
         let clock_seq_hi_variant = self.data.as_fields().3[0];
         let clock_seq_low = self.data.as_fields().3[1];
-        // FIXME: more efficient way ?
-        let node = self.data.as_fields().3[2..]
-                       .iter().fold(0_u64, |a, &b| { a*256+(b as u64) });
+        let node = &self.data.as_fields().3[2..];
+        let node = [node[5], node[4],
+                    node[3], node[2],
+                    node[1], node[0], 0, 0];
+        let node = u64::from_bytes(node);
         Ok((time_low, time_mid, time_hi_version,
             clock_seq_hi_variant, clock_seq_low, node))
     }
@@ -299,9 +302,11 @@ impl UUID {
 
     #[getter]
     pub fn node(&self) -> PyResult<u64> {
-        // FIXME: more efficient way ?
-        Ok(self.data.as_fields().3[2..]
-               .iter().fold(0_u64, |a, &b| { a*256+(b as u64) }))
+        let node = &self.data.as_fields().3[2..];
+        let node = [node[5], node[4],
+                    node[3], node[2],
+                    node[1], node[0], 0, 0];
+        Ok(u64::from_bytes(node))
     }
 
     #[getter]
