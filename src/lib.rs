@@ -1,5 +1,7 @@
 #![feature(proc_macro, specialization, const_fn)]
 #![feature(proc_macro_path_invoc)]
+#![feature(concat_idents)]
+
 
 extern crate pyo3;
 extern crate uuid;
@@ -9,7 +11,9 @@ extern crate lazy_static;
 
 
 use pyo3::prelude::*;
-use pyo3::{pymodinit, pyproto, pyclass, pymethods};
+use pyo3::{pymodinit, pyproto, pyclass, pymethods, pyfunction};
+use pyo3::wrap_function;
+use pyo3::{PyErr, exc};
 use std::str::FromStr;
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
@@ -18,6 +22,30 @@ use std::io::prelude::*;
 use std::ops::BitAnd;
 use std::ops::BitOr;
 use arrayvec::ArrayVec;
+
+
+/// Fake SafeUUID implementation
+#[pyclass]
+struct SafeUUID {}
+
+#[pymethods]
+impl SafeUUID {
+    #[getter]
+    fn safe(&self) -> PyResult<u8> {
+        Ok(0)
+    }
+
+    // FIXME: _unsafe -> unsafe
+    #[getter]
+    fn _unsafe(&self) -> PyResult<i8> {
+        Ok(-1)
+    }
+
+    #[getter]
+    fn unknown(&self) -> PyResult<Option<u8>> {
+        Ok(None)
+    }
+}
 
 
 fn get_mac_addresses() -> io::Result<Vec<String>> {
@@ -99,6 +127,7 @@ impl UUID {
                bytes_le: Option<Option<Vec<u8>>>, // FIXME: use reference directly
                fields: Option<(u32, u16, u16, u8, u8, u64)>,
                int: Option<u128>,
+               version: Option<u8>,
                args: &PyTuple)
       -> PyResult<()> {
 
@@ -109,10 +138,17 @@ impl UUID {
         let args_count = [hex.is_some(),
                           bytes.is_some(),
                           bytes_le.is_some(),
+                          int.is_some(),
                           fields.is_some()].iter().filter(|i| **i).count();
 
         if args_count > 1 {
-            return Err(exc::ValueError.into());
+            return Err(exc::TypeError.into());
+        }
+
+        if let Some(version) = version {
+            if (version < 1) || (version > 5) {
+                return Err(exc::ValueError::new("illegal version number"));
+            }
         }
 
         let uuid =
@@ -302,6 +338,12 @@ impl UUID {
             _ => Ok(self.py().None()),
         }
     }
+
+    #[getter]
+    pub fn is_safe(&self) -> PyResult<u8> {
+        let tmp = SafeUUID {};
+        tmp.safe()
+    }
 }
 
 #[pyproto]
@@ -339,6 +381,15 @@ impl PyNumberProtocol for UUID {
 }
 
 
+#[pyfunction]
+fn _load_system_functions() -> Option<bool> {
+    None
+}
+
+#[pyfunction]
+fn _generate_time_safe() -> Option<bool> {
+    None
+}
 
 ////////////////////////////////////////
 // convient functions to make PyModule
@@ -363,11 +414,16 @@ pub fn register_constants(py: Python, m: &PyModule) -> PyResult<()> {
     m.add("RESERVED_FUTURE",
           format!("{:?}", uuid::UuidVariant::Future))?;
 
+    m.add("_has_uuid_generate_time_safe", true)?;
+    m.add_function(wrap_function!(_load_system_functions))?;
+    m.add_function(wrap_function!(_generate_time_safe))?;
+
     Ok(())
 }
 
 pub fn register_classes(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<UUID>()?;
+    m.add_class::<SafeUUID>()?;
     Ok(())
 }
 
