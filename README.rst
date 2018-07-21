@@ -25,6 +25,12 @@ I mean this module is using the CPython test cases for ``uuid`` module.
 You can consider this as a drop-in replacement.
 
 
+Incompatabe part:
+
+* CPython 3.7 add ``UUID.is_safe`` attribute, we don't have it
+* some mismatch arguments are raise different exception, CPython raise ValueError, we raise TypeError, e.g. passing ``str`` to ``bytes`` argument
+
+
 
 Why are you making this ?
 ========================================
@@ -54,11 +60,35 @@ this is already usable for any use case that you want to use ``uuid`` .
 
 
 
+How to use this ?
+========================================
+
+.. code-block:: python
+
+    import su_uuid as uuid
+
+    uuid.uuid4()
+
+
+Exceptions:
+
+.. code-block:: python
+
+    >>> import su_uuid as u
+    >>> u.UUID('000z0000000000000000000000000000')
+    Traceback (most recent call last):
+      File "<stdin>", line 1, in <module>
+    ValueError: UUID creation has error: Invalid character; found `z` (0x7a) at offset 3
+
+
+
 Build
 ========================================
 
 .. code-block:: sh
 
+    rustup install nightly-2018-07-16
+    rustup override set nightly-2018-07-16
     make wheel
 
 
